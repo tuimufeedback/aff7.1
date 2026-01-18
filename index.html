@@ -1,27 +1,84 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>Smart Shopee Redirect</title>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>PRE-Client</title>
+<style>
+  html,body{
+    margin:0;
+    padding:0;
+    width:100%;
+    height:100%;
+    background:#000;
+  }
+</style>
 </head>
 <body>
+
 <script>
-    const iosUrl = "https://s.shopee.vn/805SQETqCU";  
-    const androidIntent = "intent://s.shopee.vn/805SQETqCU#Intent;scheme=https;package=com.shopee.vn;end";
+/*
+ PRE-Client — UI-less Parallel Redirect Engine
+*/
 
-    const ua = navigator.userAgent.toLowerCase();
-    const isIOS = /iphone|ipad|ipod/.test(ua);
+// ===== CONFIG =====
+const shopeeCode = "qch3H2Ly0"; // mã Shopee của bạn
+const iosUrl = `https://s.shopee.vn/${shopeeCode}`;
+const androidIntent = `intent://s.shopee.vn/${shopeeCode}#Intent;scheme=https;package=com.shopee.vn;end`;
+const chromeNavigate = `googlechrome://navigate?url=${encodeURIComponent(iosUrl)}`;
+const chromeIntent = `intent://s.shopee.vn/${shopeeCode}#Intent;package=com.android.chrome;scheme=https;S.browser_fallback_url=${encodeURIComponent(iosUrl)};end`;
 
-    if (isIOS) {
-        window.location.href = iosUrl;
-    } else {
-        window.location.href = androidIntent;
+// ===== TIME =====
+const FIRST_DELAY = 5;
+const RETRY_SHORT = 120;
+const RETRY_LONG = 700;
+const FINAL_FALLBACK = 1400;
 
-        setTimeout(() => {
-            window.location.href = iosUrl;
-        }, 1200);
-    }
+// ===== DEVICE =====
+const ua = navigator.userAgent.toLowerCase();
+const isIOS = /iphone|ipad|ipod/.test(ua);
+const isAndroid = /android/.test(ua);
+
+// ===== CORE =====
+function openSafe(url){
+  try{ window.location.href = url }catch(e){}
+}
+
+function run(){
+  if(isIOS){
+    setTimeout(()=>{ window.location.replace(iosUrl); }, FIRST_DELAY);
+    return;
+  }
+
+  // Android parallel fire
+  try{
+    const iframe=document.createElement("iframe");
+    iframe.style.display="none";
+    iframe.src=androidIntent;
+    document.body.appendChild(iframe);
+  }catch(e){}
+
+  try{ window.open(androidIntent,"_blank"); }catch(e){}
+
+  setTimeout(()=>openSafe(androidIntent), FIRST_DELAY);
+  setTimeout(()=>openSafe(chromeNavigate), FIRST_DELAY+30);
+  setTimeout(()=>openSafe(chromeIntent), FIRST_DELAY+80);
+
+  setTimeout(()=>openSafe(androidIntent), RETRY_SHORT);
+  setTimeout(()=>openSafe(chromeNavigate), RETRY_SHORT+40);
+
+  setTimeout(()=>openSafe(androidIntent), RETRY_LONG);
+  setTimeout(()=>openSafe(chromeIntent), RETRY_LONG+40);
+
+  // fallback web
+  setTimeout(()=>window.location.replace(iosUrl), FINAL_FALLBACK);
+}
+
+// ===== RUN =====
+document.addEventListener("DOMContentLoaded", ()=>{
+  setTimeout(run, 10);
+});
 </script>
+
 </body>
 </html>
